@@ -39,6 +39,10 @@ connection.connect(function (err) {
 
 });
 
+// function displayTable(){
+
+// }
+
 
 
 function runSearch() {
@@ -84,6 +88,10 @@ function runSearch() {
                 case "Do you want to add an employee":
                     employeeAdd();
                     break;
+
+                case "Would you like to update roles":
+                    employeeUpdate();
+                    break;
             }
         });
 }
@@ -100,14 +108,12 @@ function roleSearch() {
     connection.query("SELECT * FROM role", function (err, res) {
         console.table(res)
     })
-
 }
 
 function employeeSearch() {
     connection.query("SELECT * FROM employee", function (err, res) {
         console.table(res)
     })
-
 }
 
 function departmentAdd() {
@@ -127,6 +133,7 @@ function departmentAdd() {
                     if (err) throw err;
                     console.log(res.affectedRows + " product inserted!\n");
                     // Call updateProduct AFTER the INSERT completes
+                    runSearch()
                 })
         })
 }
@@ -148,8 +155,10 @@ function roleAdd() {
                     if (err) throw err;
                     console.log(res.affectedRows + " product inserted!\n");
                     // Call updateProduct AFTER the INSERT completes
+                    runSearch()
                 })
         })
+
 }
 
 function employeeAdd() {
@@ -158,12 +167,12 @@ function employeeAdd() {
             {
                 name: "empName",
                 type: "input",
-                message: "What is the new employee's first name?",
+                message: "What is the employee's first name?",
             },
             {
                 name: "empName2",
                 type: "input",
-                message: "What is the new new employee's last name?",
+                message: "What is the employee's last name?",
             }
         ])
         .then(function (answer) {
@@ -173,37 +182,76 @@ function employeeAdd() {
                     first_name: answer.empName,
                     last_name: answer.empName2,
                 },
-                // {
-                //     last_name: answer.empName2,
 
-                // },
                 function (err, res) {
                     if (err) throw err;
                     console.log(res.affectedRows + " product inserted!\n");
                     // Call updateProduct AFTER the INSERT completes
+                    runSearch()
                 })
         })
 }
 
-// function lastNameAdd() {
-//     inquirer
-//         .prompt({
-//             name: "empName2",
-//             type: "input",
-//             message: "What is the new new employee's last name?",
-//         })
-//         .then(function (answer) {
-//             connection.query(
-//                 "INSERT INTO employee SET ?",
-//                 {
-//                     last_name: answer.empName2,
-//                 },
-//                 function (err, res) {
-//                     if (err) throw err;
-//                     console.log(res.affectedRows + " product inserted!\n");
-//                     // Call updateProduct AFTER the INSERT completes
-//                 })
-//        })
 
-// }
+function employeeUpdate() {
+
+    connection.query("SELECT * FROM role", function (err, res) {
+        if (err) throw err;
+        // once you have the items, prompt the user for which they'd like to bid on
+        // console.log(res)
+        inquirer
+            .prompt([
+                {
+                    name: "choice",
+                    type: "rawlist",
+                    choices: function () {
+                        var choiceArray = [];
+                        for (var i = 0; i < res.length; i++) {
+                            choiceArray.push(res[i].title);
+                        }
+                        return choiceArray;
+                    },
+                    message: "Which role would you like to update?"
+                },
+                {
+                    name: "roleUpdate",
+                    type: "input",
+                    message: "What is the new role?"
+                }
+            ])
+
+            .then(function (answer) {
+                // get the information of the chosen item
+                var chosenItem;
+                for (var i = 0; i < res.length; i++) {
+                    if (res[i].title === answer.choice) {
+                        chosenItem = res[i];
+                    }
+
+                    connection.query(
+                        "UPDATE role SET ? WHERE ?",
+                        [
+                            {
+                                title: answer.roleUpdate
+                            },
+                            {
+                                id: chosenItem.id
+                            }
+                        ],
+                        function (error) {
+                            if (error) throw err;
+                            console.log("role replaced!");
+                            runSearch();
+                        }
+                    );
+                }
+                // else {
+                //   // bid wasn't high enough, so apologize and start over
+                //   console.log("Your bid was too low. Try again...");
+                //   start();
+                // }
+            });
+
+    })
+}
 
