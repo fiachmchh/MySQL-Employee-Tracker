@@ -1,21 +1,3 @@
-// Build a command-line application that at a minimum allows the user to:
-
-//   * Add departments, roles, employees
-
-//   * View departments, roles, employees
-
-//   * Update employee roles
-
-// Bonus points if you're able to:
-
-//   * Update employee managers
-
-//   * View employees by manager
-
-//   * Delete departments, roles, and employees
-
-//   * View the total utilized budget of a department -- ie the combined salaries of all employees in that department
-
 
 var mysql = require("mysql");
 var inquirer = require("inquirer");
@@ -23,13 +5,10 @@ var inquirer = require("inquirer");
 var connection = mysql.createConnection({
     host: "localhost",
 
-    // Your port; if not 3306
     port: 3306,
 
-    // Your username
     user: "root",
 
-    // Your password
     password: "chvfeevd829",
     database: "EmployeesDB"
 });
@@ -81,7 +60,6 @@ function runSearch() {
                     break;
 
                 case "Add an employee":
-                    // employeeAdd();
                     chooseJob();
                     break;
 
@@ -94,15 +72,16 @@ function runSearch() {
 
 
 function departmentSearch() {
-    connection.query("SELECT name FROM department", function (err, res) {
+
+    connection.query("SELECT id, name FROM department", function (err, res) {
         console.table(res)
         runSearch()
     })
-
 }
 
 function roleSearch() {
-    connection.query("SELECT title, salary, name FROM role INNER JOIN department ON role.department_id = department.id", function (err, res) {
+
+    connection.query("SELECT id, title, salary FROM role", function (err, res) {
         console.table(res)
         runSearch()
     })
@@ -139,6 +118,8 @@ function departmentAdd() {
 }
 
 function roleAdd() {
+    connection.query("SELECT id FROM department", function (err, res) {
+        if (err) throw err;
     inquirer
         .prompt([
             {
@@ -150,8 +131,21 @@ function roleAdd() {
                 name: "salary",
                 type: "input",
                 message: "What is the salary of the new role?",
-            }
-
+            },
+            {
+                name: "choice",
+                type: "rawlist",
+                choices: function () {
+                    var choiceArray = [];
+                    for (var i = 0; i < res.length; i++) {
+                        choiceArray.push(res[i].id);
+                    }
+                    return choiceArray;
+                    
+                },
+                message: "Choose the department of the new role by id?"
+                
+            },
         ])
         .then(function (answer) {
             connection.query(
@@ -159,6 +153,7 @@ function roleAdd() {
                 {
                     title: answer.roleName,
                     salary: answer.salary,
+                    department_id: answer.choices
                 },
                 function (err, res) {
                     if (err) throw err;
@@ -167,38 +162,8 @@ function roleAdd() {
                     runSearch()
                 })
         })
+    })
 }
-
-// function employeeAdd() {
-//     inquirer
-//         .prompt([
-//             {
-//                 name: "empName",
-//                 type: "input",
-//                 message: "What is the employee's first name?",
-//             },
-//             {
-//                 name: "empName2",
-//                 type: "input",
-//                 message: "What is the employee's last name?",
-//             }
-//         ])
-//         .then(function (answer) {
-//             connection.query(
-//                 "INSERT INTO employee SET ?",
-//                 {
-//                     first_name: answer.empName,
-//                     last_name: answer.empName2,
-//                 },
-
-//                 function (err, res) {
-//                     if (err) throw err;
-//                     console.log(res.affectedRows + " product inserted!\n");
-//                     // Call updateProduct AFTER the INSERT completes
-//                     runSearch()
-//                 })
-//         })
-// }
 
 function chooseJob() {
 
@@ -227,13 +192,8 @@ function chooseJob() {
                         return choiceArray;
                         
                     },
-                    message: "What is the new employees role?"
-                    
+                    message: "Choose the id of the new role?"    
                 },
-                
-                
-                
-
             ])
             .then(function (answer) {
                 // get the information of the chosen item
@@ -258,8 +218,6 @@ function employeeUpdate() {
 
     connection.query("SELECT * FROM role", function (err, res) {
         if (err) throw err;
-        // once you have the items, prompt the user for which they'd like to bid on
-        // console.log(res)
         inquirer
             .prompt([
                 {
@@ -280,9 +238,7 @@ function employeeUpdate() {
                     message: "What is the new role?"
                 }
             ])
-
             .then(function (answer) {
-
 
                 connection.query(
                     "UPDATE role SET ? WHERE ?",
@@ -301,7 +257,6 @@ function employeeUpdate() {
                     }
                 );
             });
-
     })
 }
 
