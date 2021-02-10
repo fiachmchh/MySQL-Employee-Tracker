@@ -36,6 +36,7 @@ var connection = mysql.createConnection({
 
 connection.connect(function (err) {
     if (err) throw err;
+    runSearch()
 
 });
 
@@ -52,67 +53,72 @@ function runSearch() {
             type: "rawlist",
             message: "What would you like to do?",
             choices: [
-                "Do you want to add a department",
-                "Do you want to add a role",
-                "Do you want to add an employee",
-                "Would you like to view departments",
-                "Would you like to view roles",
-                "Would you like to view employees",
-                "Would you like to update roles"
+                "View departments",
+                "View roles",
+                "View employees",
+                "Add a department",
+                "Add a role",
+                "Add an employee",
+                "Update roles"
             ]
         })
 
         .then(function (answer) {
             console.log(answer)
             switch (answer.action) {
-                case "Would you like to view departments":
+                case "View departments":
                     departmentSearch();
                     break;
 
-                case "Would you like to view roles":
+                case "View roles":
                     roleSearch();
                     break;
 
-                case "Would you like to view employees":
+                case "View employees":
                     employeeSearch();
                     break;
 
-                case "Do you want to add a department":
+                case "Add a department":
                     departmentAdd();
                     break;
 
-                case "Do you want to add a role":
+                case "Add a role":
                     roleAdd();
                     break;
 
-                case "Do you want to add an employee":
+                case "Add an employee":
                     employeeAdd();
                     break;
 
-                case "Would you like to update roles":
+                case "Update roles":
                     employeeUpdate();
                     break;
             }
         });
 }
-runSearch()
+
 
 function departmentSearch() {
-    connection.query("SELECT * FROM EmployeesDB.department", function (err, res) {
+    connection.query("SELECT name FROM department", function (err, res) {
         console.table(res)
+        runSearch()
     })
 
 }
 
 function roleSearch() {
-    connection.query("SELECT * FROM role", function (err, res) {
+    connection.query("SELECT title, salary, name FROM role INNER JOIN department ON role.department_id = department.id", function (err, res) {
         console.table(res)
+        runSearch()
     })
 }
 
 function employeeSearch() {
-    connection.query("SELECT * FROM employee", function (err, res) {
+
+    connection.query("SELECT first_name, last_name, title, salary, name FROM employee INNER JOIN role ON employee.role_id = role.id INNER JOIN department ON role.department_id = department.id", function (err, res)
+     {
         console.table(res)
+        runSearch()
     })
 }
 
@@ -140,16 +146,25 @@ function departmentAdd() {
 
 function roleAdd() {
     inquirer
-        .prompt({
+        .prompt([
+            {
             name: "roleName",
             type: "input",
             message: "What is the new role?",
-        })
+        },
+        {
+            name: "salary",
+            type: "input",
+            message: "What is the salary of the new role?",
+        }
+
+        ])
         .then(function (answer) {
             connection.query(
                 "INSERT INTO role SET ?",
                 {
                     title: answer.roleName,
+                    salary: answer.salary,
                 },
                 function (err, res) {
                     if (err) throw err;
@@ -158,7 +173,6 @@ function roleAdd() {
                     runSearch()
                 })
         })
-
 }
 
 function employeeAdd() {
@@ -192,6 +206,52 @@ function employeeAdd() {
         })
 }
 
+function chooseJob() {
+
+    connection.query("SELECT * FROM role", function (err, res) {
+        if (err) throw err;
+        // once you have the items, prompt the user for which they'd like to bid on
+        // console.log(res)
+        inquirer
+            .prompt(
+                {
+                    name: "choice",
+                    type: "rawlist",
+                    choices: function () {
+                        var choiceArray = [];
+                        for (var i = 0; i < res.length; i++) {
+                            choiceArray.push(res[i]);
+                        }
+                        return choiceArray;
+                    },
+                    
+                    message: "What is the employee's new role?"
+                    
+                },
+                console.log("choices", res[i])
+            )
+            // .then(function (answer) {
+            //     // get the information of the chosen item
+
+            //         connection.query(
+            //             "UPDATE role SET ? WHERE ?",
+            //             [
+            //                 {
+            //                     title: answer.roleUpdate
+            //                 },
+            //             ],
+            //             function (error) {
+            //                 if (error) throw err;
+            //                 console.log("role replaced!");
+            //                 runSearch();
+            //             }
+            //         );
+                
+            // });
+
+    })
+
+}
 
 function employeeUpdate() {
 
@@ -221,12 +281,7 @@ function employeeUpdate() {
             ])
 
             .then(function (answer) {
-                // get the information of the chosen item
-                var chosenItem;
-                for (var i = 0; i < res.length; i++) {
-                    if (res[i].title === answer.choice) {
-                        chosenItem = res[i];
-                    }
+                
 
                     connection.query(
                         "UPDATE role SET ? WHERE ?",
@@ -235,7 +290,7 @@ function employeeUpdate() {
                                 title: answer.roleUpdate
                             },
                             {
-                                id: chosenItem.id
+                                title: answer.choice
                             }
                         ],
                         function (error) {
@@ -244,12 +299,6 @@ function employeeUpdate() {
                             runSearch();
                         }
                     );
-                }
-                // else {
-                //   // bid wasn't high enough, so apologize and start over
-                //   console.log("Your bid was too low. Try again...");
-                //   start();
-                // }
             });
 
     })
